@@ -4,38 +4,41 @@
         <div class="cart-form__inputs">
 
             <div class="cart-form__col">
-                <input class="cart-form__input"
-                       type="text"
-                       :value="currentPrice"
-                       @input="onInputChangeDebounced('currentPrice', $event.target.value)"
-                       placeholder="Price">
+                <only-numbers-input
+                        class="cart-form__input"
+                        :value="currentPrice"
+                        @input="onInputChangeDebounced('currentPrice', $event)"
+                        placeholder="Price">
+                </only-numbers-input>
                 <div class="value-title">Price:</div>
                 <div>{{ currentPrice }}</div>
             </div>
 
             <div class="cart-form__col">
-                <input class="cart-form__input"
-                       type="text"
-                       :value="currentQuantity"
-                       @input="onInputChangeDebounced('currentQuantity', $event.target.value)"
-                       placeholder="Quantity">
+                <only-numbers-input
+                        class="cart-form__input"
+                        :value="currentQuantity"
+                        @input="onInputChangeDebounced('currentQuantity', $event)"
+                        placeholder="Quantity">
+                </only-numbers-input>
                 <div class="value-title">Quantity:</div>
                 <div>{{ currentQuantity }}</div>
             </div>
 
             <div class="cart-form__col">
-                <input class="cart-form__input"
-                       type="text"
-                       :value="currentAmount"
-                       @input="onInputChangeDebounced('currentAmount', $event.target.value)"
-                       placeholder="Amount">
+                <only-numbers-input
+                        class="cart-form__input"
+                        :value="currentAmount"
+                        @input="onInputChangeDebounced('currentAmount', $event)"
+                        placeholder="Amount">
+                </only-numbers-input>
                 <div class="value-title">Amount:</div>
                 <div>{{ currentAmount }}</div>
             </div>
 
             <div class="cart-form__col">
                 <button class="cart-form__btn"
-                        @click="sendData"
+                        @click="submit"
                         :disabled="formInProcess">
                     Send
                 </button>
@@ -58,13 +61,16 @@
             <p v-else class="cart-form__log-placeholder">Events logging</p>
         </div>
 
+        <DescriptionInfo></DescriptionInfo>
     </div>
 </template>
 
 <script>
-import { debounce } from '@/helpers/utils';
-import { mockApi } from '@/api/mockApi';
+import { debounce, capitalizeFirstLetter } from '@/helpers/utils';
+import mockApi from '@/api/mockApi';
 import { getStoreProp, setStoreProp } from '@/helpers/ls';
+import DescriptionInfo from '@/components/DescriptionInfo.vue';
+import OnlyNumbersInput from '@/components/OnlyNumbersInput.vue';
 
 // props need be saved in LS
 const persistProperties = [
@@ -152,41 +158,42 @@ export default {
             if (this.calculatingInput === null) {
                 return;
             }
-            this[`${this.calculatingInput}Calc`]();
+
+            this[`calc${capitalizeFirstLetter(this.calculatingInput)}`]();
         },
 
-        currentPriceCalc() {
+        calcCurrentPrice() {
             if (this.currentAmount === '' || this.currentQuantity === '' || +this.currentQuantity === 0) {
                 return;
             }
-            this.currentPrice = String(this.currentAmount / this.currentQuantity)
+            this.currentPrice = String(this.currentAmount / this.currentQuantity);
         },
 
-        currentQuantityCalc() {
+        calcCurrentQuantity() {
             if (this.currentAmount === '' || this.currentPrice === '' || +this.currentPrice === 0) {
                 return;
             }
             this.currentQuantity = String(this.currentAmount / this.currentPrice)
         },
 
-        currentAmountCalc() {
+        calcCurrentAmount() {
             if (this.currentPrice === '' || this.currentQuantity === '') {
                 return;
             }
             this.currentAmount = String(this.currentPrice * this.currentQuantity)
         },
 
-        addLog(message, status) {
+        addLog({message, status}) {
             this.log.unshift({
                 message, status
             });
         },
 
-        sendData() {
-            this.addLog(`Send form data. Payload: ${this.currentDataJSON} Current saved data: ${this.savedDataJSON}`);
+        submit() {
+            this.addLog({message: `Send form data. Current saved data: ${this.savedDataJSON} Payload: ${this.currentDataJSON}`});
             this.formInProcess = true;
 
-            mockApi({
+            mockApi.sendData({
                 nonce: this.currentNonce,
                 price: this.currentPrice,
                 quantity: this.currentQuantity,
@@ -197,9 +204,9 @@ export default {
                 this.quantity = data.quantity;
                 this.amount = data.amount;
                 this.currentNonce++;
-                this.addLog(`Data saved successfully. New data: ${this.savedDataJSON}`, 'success');
+                this.addLog({message: `Data saved successfully. New data: ${this.savedDataJSON}`, status: 'success'});
             }).catch(() => {
-                this.addLog(`Error. Try later...`, 'error')
+                this.addLog({message: `Error. Try later...`, status: 'error'})
             }).finally(() => {
                 this.formInProcess = false;
             })
@@ -227,7 +234,7 @@ export default {
             this[inputName] = val;
             this.updateMutationOrder(inputName);
             this.calcInputValue();
-            this.addLog(`Input ${inputName} was changed`);
+            this.addLog({message: `Input ${inputName.replace('current', '')} has changed`});
         })
 
         // watch props and save on change in LS
@@ -240,7 +247,12 @@ export default {
         this.initDataFromStore();
     },
 
+    components: {
+        DescriptionInfo,
+        OnlyNumbersInput,
+    },
+
 }
 </script>
 
-<style src="./styles/app.css"></style>
+<style src="./styles/app.scss" lang="scss"></style>
